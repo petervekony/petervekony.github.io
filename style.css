@@ -1,0 +1,9 @@
+body {
+    background: rgb(34, 34, 34);
+}
+
+#name {
+    border: rgb(239, 157, 4);
+    border-width: 3px;
+    text-align: center;
+}
