@@ -21,7 +21,7 @@ body {
 .stat-button {
   background-color: var(--base-color);
   border: none;
-  color: white;
+  color: black;
   padding: 15px 32px;
   text-align: center;
   text-decoration: none;
