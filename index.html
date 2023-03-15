@@ -10,6 +10,17 @@
         <script src="script.js" defer></script>
     </head>
     <body>
-        <div class="name" id="name">Loading username...</div>
+        <div class="navbar" id="navbar">
+            <span class="name" id="name">Loading username...</span>
+        </div>
+        <div class="main-container" id="main-container">
+            <div class="button-container" id="button-container">
+                <button type="button" class="stat-button" onclick="buildBasicInfo()">Home Screen</button>
+                <button type="button" class="stat-button" onclick="levelsOverTime()">Levels Over Time</button>
+                <button type="button" class="stat-button">Stat 3</button>
+                <button type="button" class="stat-button">Stat 4</button>
+            </div>
+            <div class="info" id="info">Here will be info/graphs</div>
+        </div>
     </body>
 </html>

@@ -25,6 +25,7 @@ query getLevelUps($userId: Int_comparison_exp){
 const getLevelUpsVariables = { userId: { _eq: ownID } };
 
 const userName = document.getElementById("name");
+const infoField = document.getElementById("info");
 
 // queryFetch is the basic function that does the GraphQL queries based on the input query and optional variables
 function queryFetch(query, variables) {
@@ -42,7 +43,7 @@ function queryFetch(query, variables) {
 function updateUsernameHeader() {
     return queryFetch(usernameQuery)
     .then((data) => {
-        userName.innerText = data.data.user[0].login;
+        userName.innerText = data.data.user[0].login + " : grit:lab stats";
       });
 }
 
@@ -54,10 +55,23 @@ function getLevelProgression() {
     let list = data.data.transaction;
     list = list.filter((record) => !queryRegex.test(record.path));
     console.log(list);
+    return list;
   });
+}
+
+async function buildBasicInfo() {
+    infoField.replaceChildren();
+    let allLevels = await getLevelProgression();
+    let highestLevel = allLevels[allLevels.length-1];
+    infoField.innerText = "Current level: " + highestLevel.amount;
+}
+
+async function levelsOverTime() {
+    infoField.replaceChildren();
 }
 
 window.onload = function () {
   updateUsernameHeader();
   getLevelProgression();
+  buildBasicInfo();
 };
