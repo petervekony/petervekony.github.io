@@ -146,6 +146,8 @@ async function levelsOverTime() {
     createdAt: new Date(item.createdAt),
   }));
 
+  const timeFormatter = d3.timeFormat("%Y %B");
+
   // 3. Create the x and y scales
   const xScale = d3
     .scaleTime()
@@ -164,7 +166,7 @@ async function levelsOverTime() {
     .y((d) => yScale(d.amount));
 
   // 5. Create SVG elements for the axes
-  const xAxis = d3.axisBottom(xScale);
+  const xAxis = d3.axisBottom(xScale).tickFormat(timeFormatter);
   const yAxis = d3.axisLeft(yScale);
 
   svg.append("g").attr("transform", `translate(0, ${height})`).call(xAxis);
@@ -176,7 +178,7 @@ async function levelsOverTime() {
     .append("path")
     .datum(formattedData)
     .attr("fill", "none")
-    .attr("stroke", "#da7e05")
+    .attr("stroke", "#faf0e6")
     .attr("stroke-width", 1.5)
     .attr("d", line);
 
@@ -187,7 +189,8 @@ async function levelsOverTime() {
     .append("text")
     .attr("transform", `translate(${width / 2}, ${height + margin.top + 20})`)
     .style("text-anchor", "middle")
-    .text("Time");
+    .text("Time")
+    .attr("fill", "#da7e05");
 
   svg
     .append("text")
@@ -196,7 +199,8 @@ async function levelsOverTime() {
     .attr("x", 0 - height / 2)
     .attr("dy", "1em")
     .style("text-anchor", "middle")
-    .text("Levels");
+    .text("Levels")
+    .attr("fill", "#da7e05");
 
 }
 
