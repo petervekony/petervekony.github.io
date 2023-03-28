@@ -19,8 +19,9 @@ body {
 }
 
 .stat-button {
+  flex: 4;
   background-color: var(--base-color);
-  border: none;
+  border: 2px solid black;
   color: black;
   padding: 15px 32px;
   text-align: center;
@@ -49,17 +50,19 @@ body {
 
 .info {
   position: relative;
-  flex: 4;
+  width: 100%;
+  /* flex: 4; */
 }
 
 .button-container {
-  flex: 1;
   display: flex;
-  flex-flow: column wrap;
+  flex-flow: row wrap;
   vertical-align: middle;
 }
 
 #navbar {
+  display: block;
+  /* flex-flow: column wrap; */
   height: 10vh;
   width: 90vw;
   position: relative;
@@ -73,6 +76,13 @@ body {
   display: inline-block;
   vertical-align: middle;
   line-height: normal;
+  font-size: 2rem;
+}
+
+#homeScreen {
+  color: var(--base-color);
+  font-size: 2rem;
+  text-align: center;
 }
 
 svg {
@@ -89,6 +99,12 @@ svg {
 
 .x-axis text {
   display: none;
+}
+
+#basicInfo {
+  text-align: center;
+  font-size: 2rem;
+  color: var(--base-color);
 }
 
 #loading {

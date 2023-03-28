@@ -436,14 +436,28 @@ async function addUpXP(array) {
   return Math.round(total / 1000);
 }
 
+let homeScreen = document.createElement("div");
+homeScreen.id = "homeScreen";
+homeScreen.innerText = `Name: Péter Vékony
+Birthday: 20. 12. 1989
+Nationality: Hungarian
+
+Hi! I am an aspiring software developer. This site shows some of my stats in my school's, grit:lab's system.`;
+
+
 let basicInfoElem = document.createElement("div");
-let infoText = `Current level: ${basicInfo.highestLevel}
+let infoText = `Basic Info
+
+Current level: ${basicInfo.highestLevel}
 Current audit ratio: ${basicInfo.auditRatio}
 Total XP earned: ${basicInfo.totalXP}kB`;
 basicInfoElem.id = "basicInfo";
 basicInfoElem.innerText = infoText;
 
 document.getElementById("home-screen").addEventListener("click", () => {
+  infoField.replaceChildren(homeScreen);
+})
+document.getElementById("basic-info").addEventListener("click", () => {
   infoField.replaceChildren(basicInfoElem);
 });
 document.getElementById("level-graph-button").addEventListener("click", () => {
@@ -469,4 +483,4 @@ window.addEventListener("resize", () => {
 });
 
 updateUsernameHeader();
-infoField.innerText = infoText;
+infoField.append(basicInfoElem);
