@@ -39,6 +39,20 @@ query getAuditRatio($offset: Int){
 }`;
 const getAllAuditsVariables = { offset: 0 };
 
+const allProjectsDoneQuery = `
+query {
+  progress(
+    order_by: {createdAt: asc}
+    where: {isDone: {_eq: true}, _and: [{userId: {_eq: 797}, grade: {_gte: 0.9}}, {object: {type: {_eq: "project"}}}]}
+  ) {
+    object {
+      id
+      name
+    }
+    updatedAt
+  }
+}`;
+
 const userName = document.getElementById("name");
 const infoField = document.getElementById("info");
 
@@ -116,10 +130,10 @@ async function getAuditRatio(acc = undefined) {
 
 const levelField = document.createElement("div");
 levelField.id = "levelField";
+let levels = await getLevelProgression();
 
-async function levelsOverTime() {
+async function levelsOverTime(levels) {
   levelField.replaceChildren();
-  let levels = await getLevelProgression();
 
   // Get the dimensions of the infoField element
   const infoFieldRect = infoField.getBoundingClientRect();
@@ -166,7 +180,7 @@ async function levelsOverTime() {
     .y((d) => yScale(d.amount));
 
   // 5. Create SVG elements for the axes
-  const xAxis = d3.axisBottom(xScale).tickFormat(timeFormatter);
+  const xAxis = d3.axisBottom(xScale).tickFormat(timeFormatter).tickSize(0);
   const yAxis = d3.axisLeft(yScale);
 
   svg.append("g").attr("transform", `translate(0, ${height})`).call(xAxis);
@@ -201,10 +215,141 @@ async function levelsOverTime() {
     .style("text-anchor", "middle")
     .text("Levels")
     .attr("fill", "#da7e05");
-
 }
 
-let basicInfoElem = document.createElement("div")
+const projectsField = document.createElement("div");
+projectsField.id = "projectsField";
+
+async function getAllProjectsDone() {
+  projectsField.replaceChildren();
+  let progress = await queryFetch(allProjectsDoneQuery);
+  progress = progress.data.progress;
+  // for (let [i, elem] of progress.data.progress) {
+    for (let i = 0; i < progress.length; i++) {
+    let query = `
+    query {
+      transaction(
+        where: {objectId: {_eq: ${progress[i].object.id}}, userId: {_eq: 797}, type: {_eq: "xp"}}
+      ) {
+        type
+        amount
+        createdAt
+        path
+      }
+    }
+    `;
+    await queryFetch(query).then((data) => {
+      let largest = Math.max(...data.data.transaction.map((o) => o.amount));
+      // console.log(data.data.transaction);
+      progress[i].xp = largest;
+      // progress[i].object.xp = largest;
+    });
+  }
+  console.log("this", progress);
+
+  infoField.appendChild(projectsField);
+  let box = infoField.getBoundingClientRect();
+
+  let margin = { top: 30, right: 30, bottom: 70, left: 60 },
+    width = box.width - margin.left - margin.right,
+    height = box.height - margin.top - margin.bottom;
+
+  const svg = d3
+    .select("#projectsField")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top, margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + 20 + ")");
+
+  progress.sort(function (a, b) {
+    return d3.ascending(new Date(a.updatedAt), new Date(b.updatedAt));
+  });
+
+  progress.forEach((e) => {
+    e.updatedAt = new Date(e.updatedAt);
+  });
+
+  const xScale = d3
+    .scaleBand()
+    .domain(progress.map((d) => d.updatedAt))
+    .range([0, width])
+    .padding(0.4);
+
+  const yScale = d3
+    .scaleLinear()
+    .domain([0, d3.max(progress, (d) => d.xp) + 10000])
+    .range([height, 0]);
+
+  const xAxis = d3.axisBottom(xScale).tickSize(0);
+  let yAxis = d3.axisLeft(yScale);
+
+  svg
+    .append("g")
+    .attr("transform", `translate(0,${height})`)
+    // .attr('fill','white')
+    // .attr('stroke','white')
+    .attr("class", "x-axis")
+    .call(xAxis);
+
+  svg
+    .append("g")
+    // .attr('fill','white')
+    .attr("class", "y-axis")
+    .attr("stroke", "white")
+    .call(yAxis);
+
+  svg
+    .select(".y-axis")
+    .selectAll("text")
+    .attr("y", -20) // move the labels up slightly
+    .style("padding-right", "10px"); // add some padding to the right of the labels
+
+  svg
+    .selectAll("rect")
+    .data(progress)
+    .enter()
+    .append("rect")
+    .attr("x", (d) => xScale(d.updatedAt))
+    .attr("y", (d) => {
+      console.log("d", JSON.stringify(d));
+      console.log("d.xp", d.xp);
+      console.log("yScale", yScale(d.xp));
+      return yScale(d.xp)})
+    .attr("width", xScale.bandwidth())
+    .attr("height", (d) => height - yScale(d.xp))
+    .attr("fill", "blueviolet")
+    .attr("stroke", "blueviolet")
+    .attr("id", "bar");
+
+  console.log("that", progress[0]);
+
+  svg
+    .selectAll("rect")
+    .append("div")
+    .attr("id", "infotip")
+    .text(
+      (d) => `${d.xp / 1000}kB
+${d.object.name}
+${d.updatedAt.toLocaleDateString("fi-FI")}`
+    );
+}
+
+const tooltip = document.createElement("div")
+tooltip.id = "tooltip"
+document.body.append(tooltip);
+document.addEventListener("mouseover", (e) => {
+  if (e.target.id === 'bar') {
+    tooltip.style.display = "block";
+    tooltip.style.left = `${e.clientX + 5}px`;
+    tooltip.style.top = `${e.clientY - 25}px`;
+    tooltip.textContent = e.target.firstChild.textContent;
+  } else {
+    tooltip.style.display = "none";
+  }
+});
+
+let basicInfoElem = document.createElement("div");
 basicInfoElem.id = "basicInfo";
 basicInfoElem.innerText = `Current level: ${basicInfo.highestLevel}
 Current audit ratio: ${basicInfo.auditRatio}`;
@@ -215,17 +360,23 @@ document.getElementById("home-screen").addEventListener("click", () => {
 document.getElementById("level-graph-button").addEventListener("click", () => {
   infoField.replaceChildren();
   infoField.append(levelField);
-  levelsOverTime();
+  levelsOverTime(levels);
 });
-
+document
+  .getElementById("xp-by-project-button")
+  .addEventListener("click", () => {
+    infoField.replaceChildren();
+    infoField.append(projectsField);
+    getAllProjectsDone();
+  });
 
 let resizeTimeout;
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimeout);
   resizeTimeout = setTimeout(() => {
-    levelsOverTime();
+    levelsOverTime(levels);
   }, 250);
-})
+});
 
 updateUsernameHeader();
 infoField.innerText = `Current level: ${basicInfo.highestLevel}

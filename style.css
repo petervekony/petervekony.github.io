@@ -78,3 +78,15 @@ body {
 svg {
   color: var(--base-color);
 }
+
+#tooltip {
+  display: none;
+  position: absolute;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.3);
+  white-space: pre-wrap;
+}
+
+.x-axis text {
+  display: none;
+}
