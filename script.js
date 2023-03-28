@@ -219,35 +219,31 @@ async function levelsOverTime(levels) {
 
 const projectsField = document.createElement("div");
 projectsField.id = "projectsField";
-
-async function getAllProjectsDone() {
-  projectsField.replaceChildren();
-  let progress = await queryFetch(allProjectsDoneQuery);
-  progress = progress.data.progress;
-  // for (let [i, elem] of progress.data.progress) {
-    for (let i = 0; i < progress.length; i++) {
-    let query = `
-    query {
-      transaction(
-        where: {objectId: {_eq: ${progress[i].object.id}}, userId: {_eq: 797}, type: {_eq: "xp"}}
-      ) {
-        type
-        amount
-        createdAt
-        path
-      }
+let progress = await queryFetch(allProjectsDoneQuery).then(data => data.data.progress);
+for (let i = 0; i < progress.length; i++) {
+  let query = `
+  query {
+    transaction(
+      where: {objectId: {_eq: ${progress[i].object.id}}, userId: {_eq: 797}, type: {_eq: "xp"}}
+    ) {
+      type
+      amount
+      createdAt
+      path
     }
-    `;
-    await queryFetch(query).then((data) => {
-      let largest = Math.max(...data.data.transaction.map((o) => o.amount));
-      // console.log(data.data.transaction);
-      progress[i].xp = largest;
-      // progress[i].object.xp = largest;
-    });
   }
-  console.log("this", progress);
+  `;
+  await queryFetch(query).then((d) => {
+    let largest = Math.max(...d.data.transaction.map((o) => o.amount));
+    // console.log(data.data.transaction);
+    progress[i].xp = largest;
+    // progress[i].object.xp = largest;
+  });
+}
 
-  infoField.appendChild(projectsField);
+async function getAllProjectsDone(progress) {
+  projectsField.replaceChildren();
+
   let box = infoField.getBoundingClientRect();
 
   let margin = { top: 30, right: 30, bottom: 70, left: 60 },
@@ -367,7 +363,7 @@ document
   .addEventListener("click", () => {
     infoField.replaceChildren();
     infoField.append(projectsField);
-    getAllProjectsDone();
+    getAllProjectsDone(progress);
   });
 
 let resizeTimeout;
@@ -375,6 +371,7 @@ window.addEventListener("resize", () => {
   clearTimeout(resizeTimeout);
   resizeTimeout = setTimeout(() => {
     levelsOverTime(levels);
+    getAllProjectsDone(progress);
   }, 250);
 });
 
