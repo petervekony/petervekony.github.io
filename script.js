@@ -53,6 +53,29 @@ query {
   }
 }`;
 
+const getAllXPQuery = `
+  query getAllXP($offset: Int){
+  user(where: { id: { _eq: ${ownID} } }) {
+    transactions(
+      order_by: { createdAt: asc },
+      offset: $offset,
+      where: {
+        type: { _eq: "xp" },
+        _and: { path: { _regex: "school" } }
+      }
+    ) {
+      createdAt
+      amount
+      path
+      objectId
+      object {
+        name
+      }
+    }
+  }
+}`;
+const getAllXPVariables = { offset: 0 };
+
 const userName = document.getElementById("name");
 const infoField = document.getElementById("info");
 
@@ -74,6 +97,7 @@ async function queryFetch(query, variables) {
 async function updateUsernameHeader() {
   return queryFetch(usernameQuery).then((data) => {
     userName.innerText = data.data.user[0].login + " : grit:lab stats";
+    document.getElementById("loading").remove();
   });
 }
 
@@ -92,11 +116,13 @@ async function buildBasicInfo() {
   let allLevels = await getLevelProgression();
   let highestLevel = allLevels[allLevels.length - 1];
   let auditRatio = await getAuditRatio();
+  let totalXP = await getAllXP().then((array) => addUpXP(array));
   // infoField.innerText = `Current level: ${highestLevel.amount}
   //   Current audit ratio: ${auditRatio}`;
   return {
     highestLevel: highestLevel.amount,
     auditRatio: auditRatio,
+    totalXP: totalXP
   };
 }
 
@@ -215,11 +241,23 @@ async function levelsOverTime(levels) {
     .style("text-anchor", "middle")
     .text("Levels")
     .attr("fill", "#da7e05");
+
+  svg
+    .append("text")
+    .attr("x", width / 2)
+    .attr("y", 20 - margin.top / 2)
+    .attr("text-anchor", "middle")
+    .style("font-size", "20px")
+    .style("text-decoration", "underline")
+    .attr("fill", "#da7e05")
+    .text("Levels Over Time");
 }
 
 const projectsField = document.createElement("div");
 projectsField.id = "projectsField";
-let progress = await queryFetch(allProjectsDoneQuery).then(data => data.data.progress);
+let progress = await queryFetch(allProjectsDoneQuery).then(
+  (data) => data.data.progress
+);
 for (let i = 0; i < progress.length; i++) {
   let query = `
   query {
@@ -235,9 +273,7 @@ for (let i = 0; i < progress.length; i++) {
   `;
   await queryFetch(query).then((d) => {
     let largest = Math.max(...d.data.transaction.map((o) => o.amount));
-    // console.log(data.data.transaction);
     progress[i].xp = largest;
-    // progress[i].object.xp = largest;
   });
 }
 
@@ -307,18 +343,12 @@ async function getAllProjectsDone(progress) {
     .enter()
     .append("rect")
     .attr("x", (d) => xScale(d.updatedAt))
-    .attr("y", (d) => {
-      console.log("d", JSON.stringify(d));
-      console.log("d.xp", d.xp);
-      console.log("yScale", yScale(d.xp));
-      return yScale(d.xp)})
+    .attr("y", (d) => yScale(d.xp))
     .attr("width", xScale.bandwidth())
     .attr("height", (d) => height - yScale(d.xp))
-    .attr("fill", "blueviolet")
-    .attr("stroke", "blueviolet")
+    .attr("fill", "#da7e05")
+    // .attr("stroke", "white")
     .attr("id", "bar");
-
-  console.log("that", progress[0]);
 
   svg
     .selectAll("rect")
@@ -329,13 +359,23 @@ async function getAllProjectsDone(progress) {
 ${d.object.name}
 ${d.updatedAt.toLocaleDateString("fi-FI")}`
     );
+
+  svg
+    .append("text")
+    .attr("x", width / 2)
+    .attr("y", 20 - margin.top / 2)
+    .attr("text-anchor", "middle")
+    .style("font-size", "20px")
+    .style("text-decoration", "underline")
+    .attr("fill", "#da7e05")
+    .text("Projects Done Over Time");
 }
 
-const tooltip = document.createElement("div")
-tooltip.id = "tooltip"
+const tooltip = document.createElement("div");
+tooltip.id = "tooltip";
 document.body.append(tooltip);
 document.addEventListener("mouseover", (e) => {
-  if (e.target.id === 'bar') {
+  if (e.target.id === "bar") {
     tooltip.style.display = "block";
     tooltip.style.left = `${e.clientX + 5}px`;
     tooltip.style.top = `${e.clientY - 25}px`;
@@ -345,10 +385,63 @@ document.addEventListener("mouseover", (e) => {
   }
 });
 
+async function getAllXP(array) {
+  return queryFetch(getAllXPQuery, getAllXPVariables).then((data) => {
+    data = data.data.user[0].transactions;
+
+    if (array === undefined) {
+      array = data;
+    } else {
+      array.push(...data);
+    }
+
+    if (data.length !== 50) {
+      getAllXPVariables.offset = 0;
+      return array;
+    } else {
+      getAllXPVariables.offset += 50;
+      return getAllXP(array);
+    }
+  });
+}
+
+async function addUpXP(array) {
+  let newObj = {};
+  let total = 0;
+  let queryRegex = new RegExp("piscine-(js|go)/");
+  array = array.filter((record) => !queryRegex.test(record.path));
+  for (let record of array) {
+    let checkpoint = record.path.includes("checkpoint");
+    let name = record.object.name;
+    let notDone = name.includes("tetris-optimizer") || name.includes("ascii-art-reverse") || name.includes("groupie-tracker-visualizations");
+    if (notDone) {
+      continue;
+    }
+    if (!(name in newObj)) {
+      newObj[name] = record.amount;
+    } else if ((newObj[name]) && !checkpoint) {
+      newObj[name] = Math.max(
+              newObj[name],
+              record.amount
+            );
+    } else {
+      newObj[name] += record.amount
+    }
+  }
+
+  for (let value of Object.values(newObj)) {
+    total += value;
+  }
+
+  return Math.round(total / 1000);
+}
+
 let basicInfoElem = document.createElement("div");
+let infoText = `Current level: ${basicInfo.highestLevel}
+Current audit ratio: ${basicInfo.auditRatio}
+Total XP earned: ${basicInfo.totalXP}kB`;
 basicInfoElem.id = "basicInfo";
-basicInfoElem.innerText = `Current level: ${basicInfo.highestLevel}
-Current audit ratio: ${basicInfo.auditRatio}`;
+basicInfoElem.innerText = infoText;
 
 document.getElementById("home-screen").addEventListener("click", () => {
   infoField.replaceChildren(basicInfoElem);
@@ -376,5 +469,4 @@ window.addEventListener("resize", () => {
 });
 
 updateUsernameHeader();
-infoField.innerText = `Current level: ${basicInfo.highestLevel}
-    Current audit ratio: ${basicInfo.auditRatio}`;
+infoField.innerText = infoText;
